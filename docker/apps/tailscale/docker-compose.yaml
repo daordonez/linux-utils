@@ -1,0 +1,20 @@
+services:
+  tailscale-client:
+    image: ghcr.io/tailscale/tailscale:latest
+    container_name: tailscale-client
+    hostname: overlay-cli
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_MODULE
+    volumes:
+      - tailscale-var-lib:/var/lib/tailscale
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:?TS_AUTHKEY not provided}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_EXTRA_ARGS=--login-server=https://net.diegordonez.com --advertise-exit-node
+    network_mode: "host"
+    restart: unless-stopped
+
+volumes:
+  tailscale-var-lib:
