@@ -2,7 +2,7 @@ services:
   tailscale-client:
     image: ghcr.io/tailscale/tailscale:latest
     container_name: tailscale-client
-    hostname: overlay-cli
+    hostname: ${HOSTNAME}
     cap_add:
       - NET_ADMIN
       - NET_RAW
