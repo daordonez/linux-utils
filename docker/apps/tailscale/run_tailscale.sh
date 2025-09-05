@@ -25,7 +25,7 @@ if [[ -z "${TS_AUTHKEY}" ]]; then
 fi
 
 #deploying headscale stack inyection env var
-HOSTNAME="$(hostname)"
-TS_AUTHKEY="${TS_AUTHKEY}" ${DC} up -d
+
+HOSTNAME="$(hostname)" TS_AUTHKEY="${TS_AUTHKEY}" ${DC} up -d
 
 echo "headscale client deployment success. See logs with ${DC} logs -f tailscale-client"
