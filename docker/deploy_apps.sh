@@ -145,8 +145,23 @@ main() {
         exit 0
     fi
 
-    show_menu
-    read -r -p "Selecciona una opción: " selection
+    case "${1:-}" in
+        "")
+            show_menu
+            read -r -p "Selecciona una opción: " selection
+            ;;
+        --all)
+            selection="A"
+            ;;
+        --help|-h)
+            echo "Uso: $(basename "$0") [--all]"
+            exit 0
+            ;;
+        *)
+            echo "Uso: $(basename "$0") [--all]" >&2
+            exit 1
+            ;;
+    esac
 
     case "${selection}" in
         0)
