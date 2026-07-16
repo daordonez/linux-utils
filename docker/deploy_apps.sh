@@ -49,6 +49,31 @@ upsert_env_value() {
     mv "${temp_file}" "${env_file}"
 }
 
+read_masked_value() {
+    local character value=""
+
+    while IFS= read -r -s -n 1 -d '' character; do
+        case "${character}" in
+            $'\n'|$'\r')
+                break
+                ;;
+            $'\b'|$'\177')
+                if [[ -n "${value}" ]]; then
+                    value="${value%?}"
+                    printf '\b \b'
+                fi
+                ;;
+            *)
+                value+="${character}"
+                printf '*'
+                ;;
+        esac
+    done
+
+    echo
+    REPLY="${value}"
+}
+
 prompt_required_value() {
     local label="$1"
     local secret="$2"
@@ -56,8 +81,9 @@ prompt_required_value() {
 
     while true; do
         if [[ "${secret}" == "true" ]]; then
-            read -r -s -p "${label}: " value
-            echo
+            printf '%s: ' "${label}"
+            read_masked_value
+            value="${REPLY}"
         else
             read -r -p "${label}: " value
         fi

@@ -1,6 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+read_masked_value() {
+    local character value=""
+
+    while IFS= read -r -s -n 1 -d '' character; do
+        case "${character}" in
+            $'\n'|$'\r')
+                break
+                ;;
+            $'\b'|$'\177')
+                if [[ -n "${value}" ]]; then
+                    value="${value%?}"
+                    printf '\b \b'
+                fi
+                ;;
+            *)
+                value+="${character}"
+                printf '*'
+                ;;
+        esac
+    done
+
+    echo
+    REPLY="${value}"
+}
+
 #verify docker compose version on this host
 if docker compose version >/dev/null 2>&1; then
     DC="docker compose"
@@ -13,9 +38,9 @@ fi
 
 #Verify TS_AUTHKEY variable whether if it's on env variables or ask for it
 if [[ -z "${TS_AUTHKEY:-}" ]]; then
-    echo -n "Enter TS_AUTHKEY: "
-    read -r -s TS_AUTHKEY
-    echo
+    printf 'Enter TS_AUTHKEY: '
+    read_masked_value
+    TS_AUTHKEY="${REPLY}"
 fi
 
 #Verify TS_AUTHKEY ok
