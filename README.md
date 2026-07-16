@@ -18,6 +18,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/daordonez/linux-utils/main/i
 
 El instalador descarga una copia temporal del repositorio y la elimina al terminar. Las aplicaciones que requieren secretos solicitan los valores en la terminal; no uses `curl ... | sh`.
 
+Cada despliegue elimina previamente los contenedores, redes y volúmenes del proyecto Compose, descarga las imágenes y recrea la aplicación. Los datos persistentes de la aplicación se eliminan en cada ejecución.
+
 Para instalar una versión concreta, sustituye `main` por una etiqueta publicada tanto en la URL como en `LINUX_UTILS_REF`:
 
 ```bash

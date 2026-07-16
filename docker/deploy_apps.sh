@@ -5,6 +5,7 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly APPS_DIR="${SCRIPT_DIR}/apps"
 
 source "${SCRIPT_DIR}/lib/terminal_input.sh"
+source "${SCRIPT_DIR}/lib/compose.sh"
 
 COMPOSE_COMMAND=()
 APPS=()
@@ -117,7 +118,8 @@ deploy_app() {
     else
         (
             cd "${app_dir}"
-            "${COMPOSE_COMMAND[@]}" up -d
+            echo "Resetting the existing stack, including containers, networks, and volumes."
+            reset_compose_stack "${COMPOSE_COMMAND[@]}"
         )
     fi
 }
