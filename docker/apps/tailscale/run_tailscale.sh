@@ -1,30 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-read_masked_value() {
-    local character value=""
+readonly APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-    while IFS= read -r -s -n 1 -d '' character; do
-        case "${character}" in
-            $'\n'|$'\r')
-                break
-                ;;
-            $'\b'|$'\177')
-                if [[ -n "${value}" ]]; then
-                    value="${value%?}"
-                    printf '\b \b'
-                fi
-                ;;
-            *)
-                value+="${character}"
-                printf '*'
-                ;;
-        esac
-    done
-
-    echo
-    REPLY="${value}"
-}
+source "${APP_DIR}/../../lib/terminal_input.sh"
 
 #verify docker compose version on this host
 if docker compose version >/dev/null 2>&1; then
@@ -38,7 +17,8 @@ fi
 
 #Verify TS_AUTHKEY variable whether if it's on env variables or ask for it
 if [[ -z "${TS_AUTHKEY:-}" ]]; then
-    printf 'Enter TS_AUTHKEY: '
+    echo "Tailscale setup: paste the auth key now; each character will appear as an asterisk." >&2
+    printf 'Enter TS_AUTHKEY: ' >&2
     read_masked_value
     TS_AUTHKEY="${REPLY}"
 fi

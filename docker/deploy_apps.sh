@@ -4,6 +4,8 @@ set -euo pipefail
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly APPS_DIR="${SCRIPT_DIR}/apps"
 
+source "${SCRIPT_DIR}/lib/terminal_input.sh"
+
 COMPOSE_COMMAND=()
 APPS=()
 
@@ -49,31 +51,6 @@ upsert_env_value() {
     mv "${temp_file}" "${env_file}"
 }
 
-read_masked_value() {
-    local character value=""
-
-    while IFS= read -r -s -n 1 -d '' character; do
-        case "${character}" in
-            $'\n'|$'\r')
-                break
-                ;;
-            $'\b'|$'\177')
-                if [[ -n "${value}" ]]; then
-                    value="${value%?}"
-                    printf '\b \b'
-                fi
-                ;;
-            *)
-                value+="${character}"
-                printf '*'
-                ;;
-        esac
-    done
-
-    echo
-    REPLY="${value}"
-}
-
 prompt_required_value() {
     local label="$1"
     local secret="$2"
@@ -81,11 +58,12 @@ prompt_required_value() {
 
     while true; do
         if [[ "${secret}" == "true" ]]; then
-            printf '%s: ' "${label}"
+            printf '%s: ' "${label}" >&2
             read_masked_value
             value="${REPLY}"
         else
-            read -r -p "${label}: " value
+            read_plain_value "${label}: "
+            value="${REPLY}"
         fi
 
         if [[ -n "${value}" ]]; then
@@ -107,7 +85,7 @@ prepare_ddns() {
 
     api_token="$(read_env_value "${env_file}" "CLOUDFLARE_API_TOKEN")"
     if [[ -z "${api_token}" ]]; then
-        echo "DDNS requires a Cloudflare API token with at least Zone / DNS / Edit permissions."
+        echo "DDNS setup: paste the Cloudflare API token now; each character will appear as an asterisk." >&2
         api_token="$(prompt_required_value "Enter CLOUDFLARE_API_TOKEN" true)"
         upsert_env_value "${env_file}" "CLOUDFLARE_API_TOKEN" "${api_token}"
     fi
@@ -174,7 +152,8 @@ main() {
     case "${1:-}" in
         "")
             show_menu
-            read -r -p "Select an option: " selection
+            read_plain_value "Select an option: "
+            selection="${REPLY}"
             ;;
         --all)
             selection="A"

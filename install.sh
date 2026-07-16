@@ -4,6 +4,7 @@ set -euo pipefail
 readonly REPOSITORY="daordonez/linux-utils"
 readonly REPOSITORY_REF="${LINUX_UTILS_REF:-main}"
 readonly ARCHIVE_URL="https://github.com/${REPOSITORY}/archive/${REPOSITORY_REF}.tar.gz"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 TEMP_DIR=""
 
@@ -42,7 +43,7 @@ verify_checksum() {
 }
 
 main() {
-    local archive_file
+    local archive_file deploy_script
     local deploy_args=()
 
     case "${1:-}" in
@@ -61,6 +62,17 @@ main() {
             ;;
     esac
 
+    deploy_script="${SCRIPT_DIR}/docker/deploy_apps.sh"
+    if [[ -f "${deploy_script}" ]]; then
+        echo "Starting the local Docker application installer..."
+        if [[ "${#deploy_args[@]}" -gt 0 ]]; then
+            bash "${deploy_script}" "${deploy_args[@]}"
+        else
+            bash "${deploy_script}"
+        fi
+        return
+    fi
+
     require_command bash
     require_command curl
     require_command tar
@@ -77,7 +89,19 @@ main() {
     verify_checksum "${archive_file}"
     tar --extract --gzip --file "${archive_file}" --directory "${TEMP_DIR}" --strip-components=1
 
-    bash "${TEMP_DIR}/docker/deploy_apps.sh" "${deploy_args[@]}"
+    deploy_script="${TEMP_DIR}/docker/deploy_apps.sh"
+    if [[ ! -f "${deploy_script}" ]]; then
+        echo "Error: the downloaded repository does not contain docker/deploy_apps.sh." >&2
+        echo "Use a branch or tag that includes the Docker application installer." >&2
+        exit 1
+    fi
+
+    echo "Starting the Docker application installer..."
+    if [[ "${#deploy_args[@]}" -gt 0 ]]; then
+        bash "${deploy_script}" "${deploy_args[@]}"
+    else
+        bash "${deploy_script}"
+    fi
 }
 
 main "$@"
