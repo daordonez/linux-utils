@@ -13,7 +13,7 @@ require_compose() {
     elif docker-compose version >/dev/null 2>&1; then
         COMPOSE_COMMAND=(docker-compose)
     else
-        echo "Error: Docker Compose no está instalado o no es accesible para el usuario actual." >&2
+        echo "Error: Docker Compose is not installed or is not accessible by the current user." >&2
         exit 1
     fi
 }
@@ -93,7 +93,7 @@ prompt_required_value() {
             return
         fi
 
-        echo "El valor no puede estar vacío." >&2
+        echo "The value cannot be empty." >&2
     done
 }
 
@@ -107,14 +107,14 @@ prepare_ddns() {
 
     api_token="$(read_env_value "${env_file}" "CLOUDFLARE_API_TOKEN")"
     if [[ -z "${api_token}" ]]; then
-        echo "DDNS requiere un token de API de Cloudflare con permisos mínimos de Zone / DNS / Edit."
-        api_token="$(prompt_required_value "Introduce CLOUDFLARE_API_TOKEN" true)"
+        echo "DDNS requires a Cloudflare API token with at least Zone / DNS / Edit permissions."
+        api_token="$(prompt_required_value "Enter CLOUDFLARE_API_TOKEN" true)"
         upsert_env_value "${env_file}" "CLOUDFLARE_API_TOKEN" "${api_token}"
     fi
 
     domains="$(read_env_value "${env_file}" "DOMAINS")"
     if [[ -z "${domains}" ]]; then
-        domains="$(prompt_required_value "Introduce los FQDN separados por comas (por ejemplo, casa.example.com)" false)"
+        domains="$(prompt_required_value "Enter comma-separated FQDNs (for example, home.example.com)" false)"
         upsert_env_value "${env_file}" "DOMAINS" "${domains}"
     fi
 }
@@ -125,7 +125,7 @@ deploy_app() {
     local launcher="${app_dir}/run_${app}.sh"
 
     echo
-    echo "Desplegando: ${app}"
+    echo "Deploying: ${app}"
 
     if [[ "${app}" == "ddns" ]]; then
         prepare_ddns "${app_dir}"
@@ -147,19 +147,19 @@ deploy_app() {
 show_menu() {
     local index
 
-    echo "Aplicaciones Docker disponibles:"
+    echo "Available Docker applications:"
     for index in "${!APPS[@]}"; do
         printf '  %d) %s\n' "$((index + 1))" "${APPS[index]}"
     done
-    echo "  A) Instalar todas"
-    echo "  0) Salir sin instalar"
+    echo "  A) Install all"
+    echo "  0) Exit without installing"
 }
 
 main() {
     local selection index app
 
     [[ -d "${APPS_DIR}" ]] || {
-        echo "Error: no existe el directorio de aplicaciones: ${APPS_DIR}" >&2
+        echo "Error: applications directory does not exist: ${APPS_DIR}" >&2
         exit 1
     }
 
@@ -167,31 +167,31 @@ main() {
     discover_apps
 
     if [[ "${#APPS[@]}" -eq 0 ]]; then
-        echo "No se han encontrado aplicaciones con Docker Compose en ${APPS_DIR}."
+        echo "No Docker Compose applications were found in ${APPS_DIR}."
         exit 0
     fi
 
     case "${1:-}" in
         "")
             show_menu
-            read -r -p "Selecciona una opción: " selection
+            read -r -p "Select an option: " selection
             ;;
         --all)
             selection="A"
             ;;
         --help|-h)
-            echo "Uso: $(basename "$0") [--all]"
+            echo "Usage: $(basename "$0") [--all]"
             exit 0
             ;;
         *)
-            echo "Uso: $(basename "$0") [--all]" >&2
+            echo "Usage: $(basename "$0") [--all]" >&2
             exit 1
             ;;
     esac
 
     case "${selection}" in
         0)
-            echo "No se ha instalado ninguna aplicación."
+            echo "No applications were installed."
             ;;
         [Aa])
             for app in "${APPS[@]}"; do
@@ -204,7 +204,7 @@ main() {
                 index=$((selection - 1))
                 deploy_app "${APPS[index]}"
             else
-                echo "Opción no válida." >&2
+                echo "Invalid option." >&2
                 exit 1
             fi
             ;;

@@ -13,17 +13,17 @@ cleanup() {
 
 show_usage() {
     cat <<'EOF'
-Uso: install.sh [--all]
+Usage: install.sh [--all]
 
-Variables opcionales:
-  LINUX_UTILS_REF       Rama o etiqueta a descargar. Valor predeterminado: main.
-  LINUX_UTILS_SHA256    SHA-256 esperado del archivo descargado.
+Optional variables:
+  LINUX_UTILS_REF       Branch or tag to download. Default: main.
+  LINUX_UTILS_SHA256    Expected SHA-256 for the downloaded archive.
 EOF
 }
 
 require_command() {
     command -v "$1" >/dev/null 2>&1 || {
-        echo "Error: falta el comando requerido: $1" >&2
+        echo "Error: required command not found: $1" >&2
         exit 1
     }
 }
@@ -36,7 +36,7 @@ verify_checksum() {
 
     actual_checksum="$(sha256sum "${archive_file}" | awk '{print $1}')"
     if [[ "${actual_checksum}" != "${LINUX_UTILS_SHA256}" ]]; then
-        echo "Error: la suma SHA-256 del archivo descargado no coincide." >&2
+        echo "Error: downloaded archive SHA-256 does not match." >&2
         exit 1
     fi
 }
@@ -72,7 +72,7 @@ main() {
     trap cleanup EXIT
     archive_file="${TEMP_DIR}/linux-utils.tar.gz"
 
-    echo "Descargando linux-utils (${REPOSITORY_REF})..."
+    echo "Downloading linux-utils (${REPOSITORY_REF})..."
     curl --fail --location --silent --show-error --output "${archive_file}" "${ARCHIVE_URL}"
     verify_checksum "${archive_file}"
     tar --extract --gzip --file "${archive_file}" --directory "${TEMP_DIR}" --strip-components=1
