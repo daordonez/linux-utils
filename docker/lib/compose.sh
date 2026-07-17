@@ -20,13 +20,21 @@ run_logged_command() {
     shift
 
     log_info "${description} started."
-    if "$@" > >(while IFS= read -r line; do log_info "${description}: ${line}"; done) \
-        2> >(while IFS= read -r line; do log_error "${description}: ${line}"; done); then
+    if "$@" 2>&1 | log_command_output "${description}"; then
         log_info "${description} completed successfully."
     else
         log_error "${description} failed."
         return 1
     fi
+}
+
+log_command_output() {
+    local description="$1"
+    local line
+
+    while IFS= read -r line; do
+        log_info "${description}: ${line}"
+    done
 }
 
 log_compose_containers() {
