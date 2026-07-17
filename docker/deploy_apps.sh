@@ -5,6 +5,7 @@ readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly APPS_DIR="${SCRIPT_DIR}/apps"
 
 source "${SCRIPT_DIR}/lib/terminal_input.sh"
+source "${SCRIPT_DIR}/lib/logging.sh"
 source "${SCRIPT_DIR}/lib/compose.sh"
 
 COMPOSE_COMMAND=()
@@ -17,6 +18,7 @@ require_compose() {
         COMPOSE_COMMAND=(docker-compose)
     else
         echo "Error: Docker Compose is not installed or is not accessible by the current user." >&2
+        log_error "Docker Compose is not installed or is not accessible by the current user."
         exit 1
     fi
 }
@@ -95,9 +97,12 @@ deploy_app() {
 
     echo
     echo "Deploying: ${app}"
+    prepare_service_directory "${app}"
+    log_info "Deployment requested for service: ${app}"
 
     if [[ "${app}" == "ddns" ]]; then
         echo "Resetting the existing DDNS container and configuration."
+        log_info "Removing the existing DDNS container and configuration."
         remove_container_if_exists "ddns-service"
         prepare_ddns "${app_dir}"
     fi
@@ -115,6 +120,7 @@ deploy_app() {
             fi
             reset_compose_stack "${COMPOSE_COMMAND[@]}"
         )
+        log_info "Deployment completed for service: ${app}"
     fi
 }
 
@@ -134,14 +140,18 @@ main() {
 
     [[ -d "${APPS_DIR}" ]] || {
         echo "Error: applications directory does not exist: ${APPS_DIR}" >&2
+        log_error "Applications directory does not exist: ${APPS_DIR}"
         exit 1
     }
 
+    initialize_observability
+    log_info "Docker application installer started."
     require_compose
     discover_apps
 
     if [[ "${#APPS[@]}" -eq 0 ]]; then
         echo "No Docker Compose applications were found in ${APPS_DIR}."
+        log_warn "No Docker Compose applications were found in ${APPS_DIR}."
         exit 0
     fi
 

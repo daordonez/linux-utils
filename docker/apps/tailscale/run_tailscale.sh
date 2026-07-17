@@ -4,6 +4,7 @@ set -euo pipefail
 readonly APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source "${APP_DIR}/../../lib/terminal_input.sh"
+source "${APP_DIR}/../../lib/logging.sh"
 source "${APP_DIR}/../../lib/compose.sh"
 
 #verify docker compose version on this host
@@ -13,6 +14,7 @@ elif docker-compose version >/dev/null 2>&1; then
     COMPOSE_COMMAND=(docker-compose)
 else
     echo "No docker compose found"
+    log_error "Docker Compose was not found."
     exit 1
 fi
 
@@ -33,7 +35,9 @@ fi
 #deploying headscale stack inyection env var
 
 echo "Resetting the existing stack, including containers, networks, and volumes."
+log_info "Resetting the existing Tailscale stack."
 remove_container_if_exists "tailscale-client"
 HOSTNAME="$(hostname)" TS_AUTHKEY="${TS_AUTHKEY}" reset_compose_stack "${COMPOSE_COMMAND[@]}"
 
 echo "Tailscale client deployment succeeded. See logs with ${COMPOSE_COMMAND[*]} logs -f tailscale-client"
+log_info "Tailscale client deployment completed successfully."

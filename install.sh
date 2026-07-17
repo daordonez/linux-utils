@@ -7,6 +7,42 @@ readonly ARCHIVE_URL="https://github.com/${REPOSITORY}/archive/${REPOSITORY_REF}
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 TEMP_DIR=""
+CONTAINERS_DIR=""
+LOG_FILE=""
+
+initialize_observability() {
+    local target_home target_user target_group
+
+    target_user="${SUDO_USER:-${USER}}"
+    target_home="${HOME}"
+    if [[ "${target_user}" != "root" ]] && command -v getent >/dev/null 2>&1; then
+        target_home="$(getent passwd "${target_user}" | awk -F: 'NR == 1 { print $6 }')"
+    fi
+
+    [[ -n "${target_home}" ]] || target_home="${HOME}"
+    CONTAINERS_DIR="${target_home}/containers"
+    LOG_FILE="${CONTAINERS_DIR}/linux_utils.log"
+    mkdir -p "${CONTAINERS_DIR}"
+    touch "${LOG_FILE}"
+    chmod 750 "${CONTAINERS_DIR}"
+    chmod 640 "${LOG_FILE}"
+
+    if [[ "$(id -u)" -eq 0 && "${target_user}" != "root" ]]; then
+        target_group="$(id -gn "${target_user}")"
+        chown "${target_user}:${target_group}" "${CONTAINERS_DIR}" "${LOG_FILE}"
+    fi
+
+    export LINUX_UTILS_CONTAINERS_DIR="${CONTAINERS_DIR}"
+    export LINUX_UTILS_LOG_FILE="${LOG_FILE}"
+    export LINUX_UTILS_TARGET_USER="${target_user}"
+}
+
+log_message() {
+    local level="$1"
+    shift
+
+    printf '%s [%s] %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "${level}" "$*" | tee -a "${LOG_FILE}"
+}
 
 cleanup() {
     [[ -n "${TEMP_DIR}" ]] && rm -rf "${TEMP_DIR}"
@@ -62,9 +98,13 @@ main() {
             ;;
     esac
 
+    initialize_observability
+    log_message "INFO" "Linux Utils installer started."
+
     deploy_script="${SCRIPT_DIR}/docker/deploy_apps.sh"
     if [[ -f "${deploy_script}" ]]; then
         echo "Starting the local Docker application installer..."
+        log_message "INFO" "Starting local Docker application installer."
         if [[ "${#deploy_args[@]}" -gt 0 ]]; then
             bash "${deploy_script}" "${deploy_args[@]}"
         else
@@ -85,6 +125,7 @@ main() {
     archive_file="${TEMP_DIR}/linux-utils.tar.gz"
 
     echo "Downloading linux-utils (${REPOSITORY_REF})..."
+    log_message "INFO" "Downloading linux-utils reference: ${REPOSITORY_REF}."
     curl --fail --location --silent --show-error --output "${archive_file}" "${ARCHIVE_URL}"
     verify_checksum "${archive_file}"
     tar --extract --gzip --file "${archive_file}" --directory "${TEMP_DIR}" --strip-components=1
@@ -97,6 +138,7 @@ main() {
     fi
 
     echo "Starting the Docker application installer..."
+    log_message "INFO" "Starting downloaded Docker application installer."
     if [[ "${#deploy_args[@]}" -gt 0 ]]; then
         bash "${deploy_script}" "${deploy_args[@]}"
     else
