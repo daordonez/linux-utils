@@ -20,6 +20,8 @@ El instalador descarga una copia temporal del repositorio y la elimina al termin
 
 Cada despliegue elimina previamente los contenedores, redes y volúmenes del proyecto Compose, descarga las imágenes y recrea la aplicación. Los datos persistentes de la aplicación se eliminan en cada ejecución.
 
+Las aplicaciones disponibles son DDNS Cloudflare, Tailscale y Nginx Proxy Manager. Nginx Proxy Manager publica los puertos TCP 80, 81 y 443; antes de instalarlo, asegúrate de que no estén ocupados. La consola administrativa queda en el puerto 81 y no debe exponerse directamente a Internet.
+
 El instalador principal crea `~/containers`, una carpeta por servicio y el registro `~/containers/linux_utils.log`. El registro incluye fecha, nivel, salida de Docker Compose, estado final de los contenedores e ID de la imagen desplegada.
 
 Para instalar una versión concreta, sustituye `main` por una etiqueta publicada tanto en la URL como en `LINUX_UTILS_REF`:
