@@ -22,7 +22,7 @@ Cada despliegue elimina previamente los contenedores, redes y volúmenes del pro
 
 Las aplicaciones disponibles son DDNS Cloudflare, Tailscale y Nginx Proxy Manager. Nginx Proxy Manager publica los puertos TCP 80, 81 y 443; antes de instalarlo, asegúrate de que no estén ocupados. La consola administrativa queda en el puerto 81 y no debe exponerse directamente a Internet.
 
-El instalador principal crea `~/containers`, una carpeta por servicio y el registro `~/containers/linux_utils.log`. El registro incluye fecha, nivel, salida de Docker Compose, estado final de los contenedores e ID de la imagen desplegada.
+El instalador principal crea `~/containers`, una carpeta por servicio y el registro `~/containers/linux_utils.log`. Cada servicio se despliega desde su propia copia persistente del archivo Compose en `~/containers/<servicio>/`, de forma que el host conserva la definición exacta usada en producción. Cuando se necesita `.env`, también se conserva allí con permisos `600`; las variables cuyo nombre contiene `TOKEN`, `KEY`, `SECRET`, `PASSWORD`, `PASS` o `CREDENTIAL` se dejan sin valor tras el despliegue. El registro conserva resultados finales, errores y el estado agregado de descarga de imágenes (`n/N`); no almacena la salida transitoria ni los bytes de progreso de Docker Compose. También registra el estado final de los contenedores e ID de la imagen desplegada.
 
 Para instalar una versión concreta, sustituye `main` por una etiqueta publicada tanto en la URL como en `LINUX_UTILS_REF`:
 

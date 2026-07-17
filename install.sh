@@ -114,6 +114,18 @@ extract_archive() {
     return "${exit_code}"
 }
 
+run_deploy_script() {
+    local deploy_script="$1"
+    shift
+
+    if bash "${deploy_script}" "$@"; then
+        log_message "INFO" "Linux Utils installer completed successfully."
+    else
+        log_message "ERROR" "Linux Utils installer failed."
+        return 1
+    fi
+}
+
 main() {
     local archive_file deploy_script
     local deploy_args=()
@@ -135,17 +147,10 @@ main() {
     esac
 
     initialize_observability
-    log_message "INFO" "Linux Utils installer started."
-
     deploy_script="${SCRIPT_DIR}/docker/deploy_apps.sh"
     if [[ -f "${deploy_script}" ]]; then
         echo "Starting the local Docker application installer..."
-        log_message "INFO" "Starting local Docker application installer."
-        if [[ "${#deploy_args[@]}" -gt 0 ]]; then
-            bash "${deploy_script}" "${deploy_args[@]}"
-        else
-            bash "${deploy_script}"
-        fi
+        run_deploy_script "${deploy_script}" "${deploy_args[@]}"
         return
     fi
 
@@ -161,7 +166,6 @@ main() {
     archive_file="${TEMP_DIR}/linux-utils.tar.gz"
 
     echo "Downloading linux-utils (${REPOSITORY_REF})..."
-    log_message "INFO" "Downloading linux-utils reference: ${REPOSITORY_REF}."
     download_archive "${archive_file}"
     verify_checksum "${archive_file}"
     extract_archive "${archive_file}" "${TEMP_DIR}"
@@ -175,12 +179,7 @@ main() {
     fi
 
     echo "Starting the Docker application installer..."
-    log_message "INFO" "Starting downloaded Docker application installer."
-    if [[ "${#deploy_args[@]}" -gt 0 ]]; then
-        bash "${deploy_script}" "${deploy_args[@]}"
-    else
-        bash "${deploy_script}"
-    fi
+    run_deploy_script "${deploy_script}" "${deploy_args[@]}"
 }
 
 main "$@"

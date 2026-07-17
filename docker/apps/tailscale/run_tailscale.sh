@@ -2,6 +2,7 @@
 set -euo pipefail
 
 readonly APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SERVICE_DIR="${LINUX_UTILS_SERVICE_DIR:-${APP_DIR}}"
 
 source "${APP_DIR}/../../lib/terminal_input.sh"
 source "${APP_DIR}/../../lib/logging.sh"
@@ -34,8 +35,10 @@ fi
 
 #deploying headscale stack inyection env var
 
+upsert_env_value "${SERVICE_DIR}/.env" "HOSTNAME" "$(hostname)"
+upsert_env_value "${SERVICE_DIR}/.env" "TS_AUTHKEY" ""
+
 echo "Resetting the existing stack, including containers, networks, and volumes."
-log_info "Resetting the existing Tailscale stack."
 remove_container_if_exists "tailscale-client"
 HOSTNAME="$(hostname)" TS_AUTHKEY="${TS_AUTHKEY}" reset_compose_stack "${COMPOSE_COMMAND[@]}"
 
