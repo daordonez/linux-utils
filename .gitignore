@@ -1,1 +1,22 @@
+# Runtime secrets and local configuration
+.env
+.env.*
+!.env.example
 docker/apps/**/.env
+
+# Private keys, certificates, and credential stores
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.kdbx
+id_rsa
+id_ed25519
+credentials.json
+secrets.yaml
+secrets.yml
+
+# Infrastructure state can contain credentials
+*.tfstate
+*.tfstate.*
