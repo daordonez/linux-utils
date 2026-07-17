@@ -34,19 +34,6 @@ discover_apps() {
     done < <(find "${APPS_DIR}" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
 }
 
-upsert_env_value() {
-    local env_file="$1"
-    local key="$2"
-    local value="$3"
-    local temp_file
-
-    temp_file="$(mktemp "${env_file}.XXXXXX")"
-    awk -F= -v key="${key}" '$1 != key { print }' "${env_file}" > "${temp_file}"
-    printf '%s=%s\n' "${key}" "${value}" >> "${temp_file}"
-    chmod 600 "${temp_file}"
-    mv "${temp_file}" "${env_file}"
-}
-
 prompt_required_value() {
     local label="$1"
     local secret="$2"
@@ -90,38 +77,85 @@ prepare_ddns() {
     upsert_env_value "${env_file}" "IP6_PROVIDER" "none"
 }
 
+find_compose_file() {
+    local app_dir="$1"
+    local compose_file
+
+    for compose_file in compose.yaml compose.yml docker-compose.yaml docker-compose.yml; do
+        if [[ -f "${app_dir}/${compose_file}" ]]; then
+            printf '%s\n' "${app_dir}/${compose_file}"
+            return
+        fi
+    done
+
+    return 1
+}
+
+stage_service_definition() {
+    local app="$1"
+    local app_dir="$2"
+    local service_dir="${CONTAINERS_DIR}/${app}"
+    local compose_source compose_destination env_source env_destination
+
+    compose_source="$(find_compose_file "${app_dir}")"
+    compose_destination="${service_dir}/$(basename "${compose_source}")"
+    cp "${compose_source}" "${compose_destination}"
+    set_service_file_permissions "${compose_destination}" 640
+
+    env_source="${app_dir}/.env"
+    env_destination="${service_dir}/.env"
+    if [[ -f "${env_source}" ]]; then
+        cp "${env_source}" "${env_destination}"
+        set_service_file_permissions "${env_destination}" 600
+    fi
+}
+
+sanitize_service_environment() {
+    local app="$1"
+    local env_file="${CONTAINERS_DIR}/${app}/.env"
+
+    [[ -f "${env_file}" ]] || return 0
+    sanitize_env_file "${env_file}" "${env_file}"
+}
+
 deploy_app() {
     local app="$1"
     local app_dir="${APPS_DIR}/${app}"
+    local service_dir="${CONTAINERS_DIR}/${app}"
     local launcher="${app_dir}/run_${app}.sh"
+    local deployment_status=0
 
     echo
     echo "Deploying: ${app}"
     prepare_service_directory "${app}"
-    log_info "Deployment requested for service: ${app}"
 
     if [[ "${app}" == "ddns" ]]; then
         echo "Resetting the existing DDNS container and configuration."
-        log_info "Removing the existing DDNS container and configuration."
         remove_container_if_exists "ddns-service"
         prepare_ddns "${app_dir}"
     fi
 
+    stage_service_definition "${app}" "${app_dir}"
+
     if [[ -f "${launcher}" ]]; then
         (
-            cd "${app_dir}"
+            cd "${service_dir}"
+            export LINUX_UTILS_SERVICE_DIR="${service_dir}"
             bash "${launcher}"
-        )
+        ) || deployment_status=$?
     else
         (
-            cd "${app_dir}"
+            cd "${service_dir}"
             if [[ "${app}" != "ddns" ]]; then
                 echo "Resetting the existing stack, including containers, networks, and volumes."
             fi
             reset_compose_stack "${COMPOSE_COMMAND[@]}"
-        )
-        log_info "Deployment completed for service: ${app}"
+        ) || deployment_status=$?
     fi
+
+    sanitize_service_environment "${app}"
+    (( deployment_status == 0 )) || return "${deployment_status}"
+    log_info "Deployment completed for service: ${app}"
 }
 
 show_menu() {
@@ -145,7 +179,6 @@ main() {
     }
 
     initialize_observability
-    log_info "Docker application installer started."
     require_compose
     discover_apps
 
@@ -194,6 +227,8 @@ main() {
             fi
             ;;
     esac
+
+    log_info "Docker application installer completed successfully."
 }
 
 main "$@"
