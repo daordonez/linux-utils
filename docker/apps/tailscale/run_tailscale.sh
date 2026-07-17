@@ -33,6 +33,7 @@ fi
 #deploying headscale stack inyection env var
 
 echo "Resetting the existing stack, including containers, networks, and volumes."
+remove_container_if_exists "tailscale-client"
 HOSTNAME="$(hostname)" TS_AUTHKEY="${TS_AUTHKEY}" reset_compose_stack "${COMPOSE_COMMAND[@]}"
 
 echo "Tailscale client deployment succeeded. See logs with ${COMPOSE_COMMAND[*]} logs -f tailscale-client"

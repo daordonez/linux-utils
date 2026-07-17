@@ -32,13 +32,6 @@ discover_apps() {
     done < <(find "${APPS_DIR}" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
 }
 
-read_env_value() {
-    local env_file="$1"
-    local key="$2"
-
-    awk -F= -v key="${key}" '$1 == key { value = substr($0, length(key) + 2) } END { print value }' "${env_file}"
-}
-
 upsert_env_value() {
     local env_file="$1"
     local key="$2"
@@ -81,21 +74,16 @@ prepare_ddns() {
     local env_file="${app_dir}/.env"
     local api_token domains
 
+    rm -f "${env_file}"
     touch "${env_file}"
     chmod 600 "${env_file}"
 
-    api_token="$(read_env_value "${env_file}" "CLOUDFLARE_API_TOKEN")"
-    if [[ -z "${api_token}" ]]; then
-        echo "DDNS setup: paste the Cloudflare API token now; each character will appear as an asterisk." >&2
-        api_token="$(prompt_required_value "Enter CLOUDFLARE_API_TOKEN" true)"
-        upsert_env_value "${env_file}" "CLOUDFLARE_API_TOKEN" "${api_token}"
-    fi
+    echo "DDNS setup: paste the Cloudflare API token now; each character will appear as an asterisk." >&2
+    api_token="$(prompt_required_value "Enter CLOUDFLARE_API_TOKEN" true)"
+    upsert_env_value "${env_file}" "CLOUDFLARE_API_TOKEN" "${api_token}"
 
-    domains="$(read_env_value "${env_file}" "DOMAINS")"
-    if [[ -z "${domains}" ]]; then
-        domains="$(prompt_required_value "Enter comma-separated FQDNs (for example, home.example.com)" false)"
-        upsert_env_value "${env_file}" "DOMAINS" "${domains}"
-    fi
+    domains="$(prompt_required_value "Enter comma-separated FQDNs (for example, home.example.com)" false)"
+    upsert_env_value "${env_file}" "DOMAINS" "${domains}"
 }
 
 deploy_app() {
@@ -107,6 +95,8 @@ deploy_app() {
     echo "Deploying: ${app}"
 
     if [[ "${app}" == "ddns" ]]; then
+        echo "Resetting the existing DDNS container and configuration."
+        remove_container_if_exists "ddns-service"
         prepare_ddns "${app_dir}"
     fi
 
@@ -118,7 +108,9 @@ deploy_app() {
     else
         (
             cd "${app_dir}"
-            echo "Resetting the existing stack, including containers, networks, and volumes."
+            if [[ "${app}" != "ddns" ]]; then
+                echo "Resetting the existing stack, including containers, networks, and volumes."
+            fi
             reset_compose_stack "${COMPOSE_COMMAND[@]}"
         )
     fi
