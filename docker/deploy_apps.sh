@@ -84,6 +84,8 @@ prepare_ddns() {
 
     domains="$(prompt_required_value "Enter comma-separated FQDNs (for example, home.example.com)" false)"
     upsert_env_value "${env_file}" "DOMAINS" "${domains}"
+    upsert_env_value "${env_file}" "PROXIED" "false"
+    upsert_env_value "${env_file}" "IP6_PROVIDER" "none"
 }
 
 deploy_app() {
